@@ -1,4 +1,5 @@
 import Providers from "@/app/providers.tsx";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -7,10 +8,12 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Providers>
-        <App />
-      </Providers>
-    </BrowserRouter>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <Providers>
+          <App />
+        </Providers>
+      </BrowserRouter>
+    </AppErrorBoundary>
   </StrictMode>,
 );
