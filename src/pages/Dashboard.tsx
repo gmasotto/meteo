@@ -1,9 +1,4 @@
 import {
-  openWeatherQueries,
-  type CitySuggestion,
-  type DayMomentWeather,
-} from "@/api/openWeather";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -12,41 +7,24 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useDebounce } from "@/hooks/useDebounce";
-import { useLastSearchedCity } from "@/hooks/useLastSearchedCity";
-import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useDashboardLogic } from "@/pages/dashboard/useDashboardLogic";
 
-function cityLabel(city: CitySuggestion) {
-  return `${city.name}${city.state ? `, ${city.state}` : ""}, ${city.country}`;
-}
-
-function detailHref(city: CitySuggestion, moment: DayMomentWeather["moment"]) {
-  return `/detail/${city.lat}/${city.lon}/${moment}`;
-}
-
-const Dashboard = () => {
-  const { lastCity, saveLastCity } = useLastSearchedCity();
-  const [cityInput, setCityInput] = useState(() =>
-    lastCity ? cityLabel(lastCity) : "",
-  );
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(
-    () => lastCity,
-  );
-
-  const debouncedCityInput = useDebounce(cityInput);
-
-  const citySuggestionsQuery = useQuery(
-    openWeatherQueries.citySuggestions(debouncedCityInput),
-  );
-
-  const selectedCityWeatherQuery = useQuery(
-    openWeatherQueries.currentWeather(selectedCity),
-  );
-  const dayMomentsQuery = useQuery(openWeatherQueries.dayMoments(selectedCity));
+function Dashboard() {
+  const {
+    cityInput,
+    selectedCity,
+    citySuggestionsQuery,
+    selectedCityWeatherQuery,
+    dayMomentsQuery,
+    showSuggestions,
+    getCityLabel,
+    handleInputFocus,
+    handleInputChange,
+    handleCitySelect,
+    getDetailLink,
+  } = useDashboardLogic();
 
   return (
     <section className="container py-8">
@@ -64,15 +42,11 @@ const Dashboard = () => {
             value={cityInput}
             placeholder="Search city (e.g. Milan, Rome, London)"
             className="h-11 pl-10"
-            onFocus={() => setIsSuggestionsOpen(!selectedCity)}
-            onChange={(event) => {
-              setCityInput(event.target.value);
-              setSelectedCity(null);
-              setIsSuggestionsOpen(true);
-            }}
+            onFocus={handleInputFocus}
+            onChange={(event) => handleInputChange(event.target.value)}
           />
 
-          {isSuggestionsOpen && debouncedCityInput.trim().length >= 2 && (
+          {showSuggestions && (
             <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-input bg-background shadow-sm">
               {citySuggestionsQuery.isLoading && (
                 <p className="p-3 text-sm text-muted-foreground">
@@ -99,14 +73,9 @@ const Dashboard = () => {
                   key={`${city.name}-${city.lat}-${city.lon}-${city.country}`}
                   type="button"
                   className="block w-full cursor-pointer border-b border-input px-3 py-2 text-left text-sm last:border-b-0 hover:bg-accent"
-                  onClick={() => {
-                    setSelectedCity(city);
-                    setCityInput(cityLabel(city));
-                    setIsSuggestionsOpen(false);
-                    saveLastCity(city);
-                  }}
+                  onClick={() => handleCitySelect(city)}
                 >
-                  {cityLabel(city)}
+                  {getCityLabel(city)}
                 </button>
               ))}
             </div>
@@ -181,42 +150,39 @@ const Dashboard = () => {
 
         {dayMomentsQuery.data && selectedCity && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {dayMomentsQuery.data.map((moment) => (
-              <Link
-                key={moment.moment}
-                to={detailHref(selectedCity, moment.moment)}
-                state={{
-                  cityName: selectedCity.name,
-                  country: selectedCity.country,
-                  momentLabel: moment.label,
-                }}
-              >
-                <Card className="bg-background shadow-none transition-colors hover:bg-accent/40">
-                  <CardHeader className="items-center p-4 pb-2 text-center">
-                    <CardDescription>{moment.label}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center gap-2 p-4 pt-0">
-                    <img
-                      src={`https://openweathermap.org/img/wn/${moment.icon}@2x.png`}
-                      alt={moment.label}
-                      className="h-12 w-12"
-                    />
-                    <p className="text-sm text-muted-foreground capitalize">
-                      {moment.iconLabel}
-                    </p>
+            {dayMomentsQuery.data.map((moment) => {
+              const detailLink = getDetailLink(moment.moment, moment.label);
+              if (!detailLink) return null;
 
-                    <p className="text-sm font-semibold">
-                      {Math.round(moment.temperature)}°C
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+              return (
+                <Link key={moment.moment} to={detailLink.to} state={detailLink.state}>
+                  <Card className="bg-background shadow-none transition-colors hover:bg-accent/40">
+                    <CardHeader className="items-center p-4 pb-2 text-center">
+                      <CardDescription>{moment.label}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center gap-2 p-4 pt-0">
+                      <img
+                        src={`https://openweathermap.org/img/wn/${moment.icon}@2x.png`}
+                        alt={moment.label}
+                        className="h-12 w-12"
+                      />
+                      <p className="text-sm text-muted-foreground capitalize">
+                        {moment.iconLabel}
+                      </p>
+
+                      <p className="text-sm font-semibold">
+                        {Math.round(moment.temperature)}°C
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
     </section>
   );
-};
+}
 
 export default Dashboard;

@@ -1,56 +1,19 @@
 import {
-  type CitySuggestion,
-  filterSlotsByMoment,
-  openWeatherQueries,
-  type DayMomentKey,
-} from "@/api/openWeather";
-import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useDetailLogic } from "@/pages/detail/useDetailLogic";
 
-const MOMENTS: DayMomentKey[] = ["morning", "afternoon", "evening", "night"];
+function Detail() {
+  const { hasValidRoute, cityName, country, momentLabel, forecastQuery, hourlySlots } =
+    useDetailLogic();
 
-type LocationState = {
-  cityName?: string;
-  country?: string;
-  momentLabel?: string;
-};
-
-function isMoment(value: string | undefined): value is DayMomentKey {
-  return value ? MOMENTS.includes(value as DayMomentKey) : false;
-}
-
-const Detail = () => {
-  const { lat, lon, moment } = useParams();
-  const { state } = useLocation();
-  const locationState = (state ?? {}) as LocationState;
-
-  const parsedLat = Number(lat);
-  const parsedLon = Number(lon);
-
-  const hasValidCoords = Number.isFinite(parsedLat) && Number.isFinite(parsedLon);
-  const hasValidMoment = isMoment(moment);
-
-  const selectedCity: CitySuggestion | null =
-    hasValidCoords && hasValidMoment
-      ? {
-          name: locationState.cityName ?? "Selected city",
-          country: locationState.country ?? "",
-          lat: parsedLat,
-          lon: parsedLon,
-        }
-      : null;
-
-  const forecastQuery = useQuery(openWeatherQueries.forecast(selectedCity));
-
-  if (!hasValidCoords || !hasValidMoment) {
+  if (!hasValidRoute) {
     return (
       <section className="container py-8">
         <div className="mx-auto w-full max-w-2xl">
@@ -73,10 +36,6 @@ const Detail = () => {
     );
   }
 
-  const hourlySlots = forecastQuery.data
-    ? filterSlotsByMoment(forecastQuery.data, moment).slice(0, 8)
-    : [];
-
   return (
     <section className="container py-8">
       <div className="mx-auto w-full max-w-3xl space-y-4">
@@ -87,11 +46,11 @@ const Detail = () => {
 
         <div>
           <h1 className="text-2xl font-semibold">
-            {locationState.cityName ?? "Selected city"}
-            {locationState.country ? `, ${locationState.country}` : ""}
+            {cityName}
+            {country ? `, ${country}` : ""}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Hourly forecast for {locationState.momentLabel ?? moment}
+            Hourly forecast for {momentLabel}
           </p>
         </div>
 
@@ -162,6 +121,6 @@ const Detail = () => {
       </div>
     </section>
   );
-};
+}
 
 export default Detail;
