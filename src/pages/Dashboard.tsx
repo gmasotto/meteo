@@ -1,6 +1,6 @@
 import {
-  type CitySuggestion,
   openWeatherQueries,
+  type CitySuggestion,
   type DayMomentWeather,
 } from "@/api/openWeather";
 import {
@@ -11,7 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useLastSearchedCity } from "@/hooks/useLastSearchedCity";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useState } from "react";
@@ -26,9 +28,14 @@ function detailHref(city: CitySuggestion, moment: DayMomentWeather["moment"]) {
 }
 
 const Dashboard = () => {
-  const [cityInput, setCityInput] = useState("");
+  const { lastCity, saveLastCity } = useLastSearchedCity();
+  const [cityInput, setCityInput] = useState(() =>
+    lastCity ? cityLabel(lastCity) : "",
+  );
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(null);
+  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(
+    () => lastCity,
+  );
 
   const debouncedCityInput = useDebounce(cityInput);
 
@@ -46,9 +53,13 @@ const Dashboard = () => {
       <div className="mx-auto w-full max-w-2xl space-y-4">
         <h1 className="text-2xl font-semibold">Search City Weather</h1>
 
+        <Label htmlFor="city-search" className="mb-2">
+          Search city
+        </Label>
         <div className="relative">
           <Search className="pointer-events-none absolute top-3 left-3 h-5 w-5 text-muted-foreground" />
           <Input
+            id="city-search"
             type="text"
             value={cityInput}
             placeholder="Search city (e.g. Milan, Rome, London)"
@@ -92,6 +103,7 @@ const Dashboard = () => {
                     setSelectedCity(city);
                     setCityInput(cityLabel(city));
                     setIsSuggestionsOpen(false);
+                    saveLastCity(city);
                   }}
                 >
                   {cityLabel(city)}
