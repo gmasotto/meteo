@@ -28,5 +28,26 @@ export const weatherApiResponseSchema = z.object({
   ),
 });
 
+export const forecastApiResponseSchema = z.object({
+  list: z.array(
+    z.object({
+      dt: z.number(),
+      dt_txt: z.string(),
+      main: z.object({
+        temp: z.number(),
+      }),
+      weather: z.array(
+        z.object({
+          description: z.string(),
+          icon: z.string(),
+          id: z.number(),
+          main: z.string(),
+        }),
+      ),
+    }),
+  ),
+});
+
 export type CitySuggestion = z.infer<typeof citySuggestionSchema>;
 export type WeatherApiResponse = z.infer<typeof weatherApiResponseSchema>;
+export type ForecastApiResponse = z.infer<typeof forecastApiResponseSchema>;

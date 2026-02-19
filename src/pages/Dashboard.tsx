@@ -30,6 +30,7 @@ const Dashboard = () => {
   const selectedCityWeatherQuery = useQuery(
     openWeatherQueries.currentWeather(selectedCity),
   );
+  const dayMomentsQuery = useQuery(openWeatherQueries.dayMoments(selectedCity));
 
   return (
     <section className="container py-8">
@@ -43,7 +44,7 @@ const Dashboard = () => {
             value={cityInput}
             placeholder="Search city (e.g. Milan, Rome, London)"
             className="h-11 pl-10"
-            onFocus={() => setIsSuggestionsOpen(true)}
+            onFocus={() => setIsSuggestionsOpen(!selectedCity)}
             onChange={(event) => {
               setCityInput(event.target.value);
               setSelectedCity(null);
@@ -151,6 +152,40 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {dayMomentsQuery.isLoading && (
+          <p className="text-sm text-muted-foreground">
+            Loading day moments forecast...
+          </p>
+        )}
+
+        {dayMomentsQuery.data && (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {dayMomentsQuery.data.map((moment) => (
+              <Card key={moment.moment} className="bg-background shadow-none">
+                <CardHeader className="items-center p-4 pb-2 text-center">
+                  <CardDescription className="cursor-help">
+                    {moment.label}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-2 p-4 pt-0">
+                  <img
+                    src={`https://openweathermap.org/img/wn/${moment.icon}@2x.png`}
+                    alt={moment.label}
+                    className="h-12 w-12"
+                  />
+                  <p className="capitalize text-muted-foreground text-sm">
+                    {moment.iconLabel}
+                  </p>
+
+                  <p className="text-sm font-semibold">
+                    {Math.round(moment.temperature)}°C
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </section>
