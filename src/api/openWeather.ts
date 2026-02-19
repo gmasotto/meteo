@@ -4,6 +4,7 @@ import {
   forecastApiResponseSchema,
   weatherApiResponseSchema,
   type CitySuggestion,
+  type ForecastApiResponse,
 } from "@/api/schemas";
 import { queryOptions } from "@tanstack/react-query";
 export type { CitySuggestion } from "@/api/schemas";
@@ -30,6 +31,13 @@ export type DayMomentWeather = {
   label: string;
   iconLabel: string;
   temperature: number;
+  icon: string;
+};
+
+export type ForecastSlot = {
+  timestamp: number;
+  temperature: number;
+  iconLabel: string;
   icon: string;
 };
 
@@ -95,42 +103,27 @@ const DAY_MOMENT_LABELS: Record<DayMomentKey, string> = {
   night: "Night",
 };
 
-function getMomentByHour(hour: number): DayMomentKey {
+export function getMomentByHour(hour: number): DayMomentKey {
   if (hour >= 6 && hour < 12) return "morning";
   if (hour >= 12 && hour < 18) return "afternoon";
   if (hour >= 18 && hour < 23) return "evening";
   return "night";
 }
 
-export async function searchCities(query: string): Promise<CitySuggestion[]> {
-  const term = query.trim(); // in caso ci fossero degli spazi, cosi evito refetch per query differente
-
-  if (term.length < 2) {
-    return [];
-  }
-
-  const url = new URL(`${GEOCODING_BASE_URL}/direct`);
-  url.searchParams.set("q", term);
-  url.searchParams.set("limit", "5");
-
-  return fetchJson(withApiKey(url), citySuggestionsSchema);
+function toForecastSlots(data: ForecastApiResponse): ForecastSlot[] {
+  return data.list.map((slot) => ({
+    timestamp: slot.dt,
+    temperature: slot.main.temp,
+    iconLabel: slot.weather[0]?.description ?? "No description",
+    icon: slot.weather[0]?.icon ?? "01d",
+  }));
 }
 
-export async function fetchCurrentWeather(
-  selectedCity: Pick<CitySuggestion, "lat" | "lon" | "country">,
-): Promise<CurrentWeather> {
-  const data = await fetchWeatherRaw(selectedCity.lat, selectedCity.lon);
-  return toCurrentWeather(data, selectedCity);
-}
-
-export async function fetchDayMomentsWeather(
-  selectedCity: Pick<CitySuggestion, "lat" | "lon">,
-): Promise<DayMomentWeather[]> {
-  const data = await fetchForecastRaw(selectedCity.lat, selectedCity.lon);
+export function mapDayMomentsFromSlots(slots: ForecastSlot[]): DayMomentWeather[] {
   const byMoment = new Map<DayMomentKey, DayMomentWeather>();
 
-  for (const slot of data.list) {
-    const date = new Date(slot.dt * 1000);
+  for (const slot of slots) {
+    const date = new Date(slot.timestamp * 1000);
     const moment = getMomentByHour(date.getHours());
 
     if (byMoment.has(moment)) {
@@ -138,11 +131,11 @@ export async function fetchDayMomentsWeather(
     }
 
     byMoment.set(moment, {
-      iconLabel: slot.weather[0]?.description ?? "No description",
+      iconLabel: slot.iconLabel,
       moment,
       label: DAY_MOMENT_LABELS[moment],
-      temperature: slot.main.temp,
-      icon: slot.weather[0]?.icon ?? "01d",
+      temperature: slot.temperature,
+      icon: slot.icon,
     });
 
     if (byMoment.size === DAY_MOMENT_ORDER.length) {
@@ -166,14 +159,63 @@ export async function fetchDayMomentsWeather(
   });
 }
 
+export function filterSlotsByMoment(
+  slots: ForecastSlot[],
+  moment: DayMomentKey,
+): ForecastSlot[] {
+  return slots.filter((slot) => {
+    const hour = new Date(slot.timestamp * 1000).getHours();
+    return getMomentByHour(hour) === moment;
+  });
+}
+
+export async function searchCities(query: string): Promise<CitySuggestion[]> {
+  const term = query.trim();
+
+  if (term.length < 2) {
+    return [];
+  }
+
+  const url = new URL(`${GEOCODING_BASE_URL}/direct`);
+  url.searchParams.set("q", term);
+  url.searchParams.set("limit", "5");
+
+  return fetchJson(withApiKey(url), citySuggestionsSchema);
+}
+
+export async function fetchCurrentWeather(
+  selectedCity: Pick<CitySuggestion, "lat" | "lon" | "country">,
+): Promise<CurrentWeather> {
+  const data = await fetchWeatherRaw(selectedCity.lat, selectedCity.lon);
+  return toCurrentWeather(data, selectedCity);
+}
+
+export async function fetchForecastSlots(
+  selectedCity: Pick<CitySuggestion, "lat" | "lon">,
+): Promise<ForecastSlot[]> {
+  const data = await fetchForecastRaw(selectedCity.lat, selectedCity.lon);
+  return toForecastSlots(data);
+}
+
+function forecastOptions(city: CitySuggestion | null) {
+  return queryOptions({
+    queryKey: openWeatherQueryKeys.forecast(city?.lat, city?.lon),
+    queryFn: async () => {
+      if (!city) {
+        throw new Error("City is required");
+      }
+
+      return fetchForecastSlots(city);
+    },
+    enabled: Boolean(city),
+  });
+}
+
 export const openWeatherQueryKeys = {
-  // potrei mettere le key direttamente dentro alla query,
-  // ma se le estraggo ho un maggiore controllo nel caso mi servisse
   citySuggestions: (query: string) => ["city-suggestions", query] as const,
   currentWeather: (lat?: number, lon?: number) =>
     ["city-weather", lat, lon] as const,
-  dayMoments: (lat?: number, lon?: number) =>
-    ["day-moments", lat, lon] as const,
+  forecast: (lat?: number, lon?: number) => ["city-forecast", lat, lon] as const,
 };
 
 export const openWeatherQueries = {
@@ -196,16 +238,11 @@ export const openWeatherQueries = {
       enabled: Boolean(city),
     }),
 
+  forecast: (city: CitySuggestion | null) => forecastOptions(city),
+
   dayMoments: (city: CitySuggestion | null) =>
     queryOptions({
-      queryKey: openWeatherQueryKeys.dayMoments(city?.lat, city?.lon),
-      queryFn: async () => {
-        if (!city) {
-          throw new Error("City is required");
-        }
-
-        return fetchDayMomentsWeather(city);
-      },
-      enabled: Boolean(city),
+      ...forecastOptions(city),
+      select: mapDayMomentsFromSlots,
     }),
 };

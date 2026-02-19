@@ -1,4 +1,8 @@
-import { type CitySuggestion, openWeatherQueries } from "@/api/openWeather";
+import {
+  type CitySuggestion,
+  openWeatherQueries,
+  type DayMomentWeather,
+} from "@/api/openWeather";
 import {
   Card,
   CardContent,
@@ -11,9 +15,14 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 function cityLabel(city: CitySuggestion) {
   return `${city.name}${city.state ? `, ${city.state}` : ""}, ${city.country}`;
+}
+
+function detailHref(city: CitySuggestion, moment: DayMomentWeather["moment"]) {
+  return `/detail/${city.lat}/${city.lon}/${moment}`;
 }
 
 const Dashboard = () => {
@@ -123,8 +132,6 @@ const Dashboard = () => {
                 </CardDescription>
               </div>
               <img
-                // avrei voluto usare le icone di lucid, ma openweather
-                // ha le sue che si collegano perfettamente, ho scelto le loro per questa parte
                 src={`https://openweathermap.org/img/wn/${selectedCityWeatherQuery.data.icon}@2x.png`}
                 alt={selectedCityWeatherQuery.data.condition}
                 className="h-14 w-14"
@@ -160,30 +167,38 @@ const Dashboard = () => {
           </p>
         )}
 
-        {dayMomentsQuery.data && (
+        {dayMomentsQuery.data && selectedCity && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {dayMomentsQuery.data.map((moment) => (
-              <Card key={moment.moment} className="bg-background shadow-none">
-                <CardHeader className="items-center p-4 pb-2 text-center">
-                  <CardDescription className="cursor-help">
-                    {moment.label}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-2 p-4 pt-0">
-                  <img
-                    src={`https://openweathermap.org/img/wn/${moment.icon}@2x.png`}
-                    alt={moment.label}
-                    className="h-12 w-12"
-                  />
-                  <p className="capitalize text-muted-foreground text-sm">
-                    {moment.iconLabel}
-                  </p>
+              <Link
+                key={moment.moment}
+                to={detailHref(selectedCity, moment.moment)}
+                state={{
+                  cityName: selectedCity.name,
+                  country: selectedCity.country,
+                  momentLabel: moment.label,
+                }}
+              >
+                <Card className="bg-background shadow-none transition-colors hover:bg-accent/40">
+                  <CardHeader className="items-center p-4 pb-2 text-center">
+                    <CardDescription>{moment.label}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center gap-2 p-4 pt-0">
+                    <img
+                      src={`https://openweathermap.org/img/wn/${moment.icon}@2x.png`}
+                      alt={moment.label}
+                      className="h-12 w-12"
+                    />
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {moment.iconLabel}
+                    </p>
 
-                  <p className="text-sm font-semibold">
-                    {Math.round(moment.temperature)}°C
-                  </p>
-                </CardContent>
-              </Card>
+                    <p className="text-sm font-semibold">
+                      {Math.round(moment.temperature)}°C
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
