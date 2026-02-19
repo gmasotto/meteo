@@ -2,7 +2,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { CloudSun } from "lucide-react";
 import { type ReactNode } from "react";
 
-const AppLayout = ({ children }: { children: ReactNode }) => {
+function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background p-4">
       <header className="border-b ">
@@ -17,6 +17,6 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       <main>{children}</main>
     </div>
   );
-};
+}
 
 export default AppLayout;

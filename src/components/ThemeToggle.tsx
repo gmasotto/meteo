@@ -5,7 +5,7 @@ import { Moon, Sun } from "lucide-react";
 /**
  * Toggles UI theme between light and dark modes.
  */
-export const ThemeToggle = () => {
+export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   const isDark = theme === "dark";
@@ -20,5 +20,5 @@ export const ThemeToggle = () => {
       {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </Button>
   );
-};
+}
 export default ThemeToggle;
