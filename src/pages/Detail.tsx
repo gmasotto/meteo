@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getApiStatusMessage } from "@/api/errorMessages";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDetailLogic } from "@/pages/detail/useDetailLogic";
@@ -66,7 +67,10 @@ function Detail() {
           <Card className="border-destructive">
             <CardContent className="p-4">
               <p className="text-destructive text-sm">
-                Failed to load hourly forecast for this city.
+                {getApiStatusMessage(
+                  forecastQuery.error,
+                  "Failed to load hourly forecast for this city",
+                )}
               </p>
             </CardContent>
           </Card>

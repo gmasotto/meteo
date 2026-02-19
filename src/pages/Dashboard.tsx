@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getApiStatusMessage } from "@/api/errorMessages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search } from "lucide-react";
@@ -56,7 +57,10 @@ function Dashboard() {
 
               {citySuggestionsQuery.isError && (
                 <p className="p-3 text-sm text-destructive">
-                  Could not load cities. Check network/API key.
+                  {getApiStatusMessage(
+                    citySuggestionsQuery.error,
+                    "Could not load cities",
+                  )}
                 </p>
               )}
 
@@ -93,7 +97,10 @@ function Dashboard() {
         {selectedCityWeatherQuery.isError && (
           <div className="rounded-md border border-destructive p-4">
             <p className="text-sm text-destructive">
-              Failed to fetch weather for selected city.
+              {getApiStatusMessage(
+                selectedCityWeatherQuery.error,
+                "Failed to fetch weather for selected city",
+              )}
             </p>
           </div>
         )}
