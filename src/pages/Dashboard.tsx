@@ -1,3 +1,4 @@
+import { getApiStatusMessage } from "@/api/errorMessages";
 import {
   Card,
   CardContent,
@@ -5,12 +6,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getApiStatusMessage } from "@/api/errorMessages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDashboardLogic } from "@/pages/dashboard/useDashboardLogic";
 import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useDashboardLogic } from "@/pages/dashboard/useDashboardLogic";
 
 function Dashboard() {
   const {
@@ -28,7 +28,7 @@ function Dashboard() {
   } = useDashboardLogic();
 
   return (
-    <section className="container py-8">
+    <section className="py-8">
       <div className="mx-auto w-full max-w-2xl space-y-4">
         <h1 className="text-2xl font-semibold">Search City Weather</h1>
 
@@ -162,7 +162,11 @@ function Dashboard() {
               if (!detailLink) return null;
 
               return (
-                <Link key={moment.moment} to={detailLink.to} state={detailLink.state}>
+                <Link
+                  key={moment.moment}
+                  to={detailLink.to}
+                  state={detailLink.state}
+                >
                   <Card className="bg-background shadow-none transition-colors hover:bg-accent/40">
                     <CardHeader className="items-center p-4 pb-2 text-center">
                       <CardDescription>{moment.label}</CardDescription>
